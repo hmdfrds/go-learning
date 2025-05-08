@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -175,14 +177,36 @@ func todosHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	var err error
-	db, err = initDB("todos.db")
+	port := ":8080"
+	dbPath := "todos.db"
+
+	portFlag := flag.String("port", port, "Port for the HTTP server (e.g, :8080)")
+	dbPathFlag := flag.String("dbpath", dbPath, "Path to the SQLite database file")
+
+	flag.Parse()
+
+	envPort, portExist := os.LookupEnv("PORT")
+	envDbpath, dbpathExist := os.LookupEnv("DBPATH")
+
+	if *portFlag != port {
+		port = *portFlag
+	} else if portExist {
+		port = envPort
+	}
+	if *dbPathFlag != dbPath {
+		dbPath = *dbPathFlag
+	} else if dbpathExist {
+		dbPath = envDbpath
+	}
+	log.Printf("Using Database Path: %s\n", dbPath)
+
+	db, err = initDB(dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
 	http.HandleFunc("/todos", todosHandler)
 
-	port := ":8080"
 	log.Printf("Server starting on http://localhost%s\n", port)
 
 	err = http.ListenAndServe(port, nil)
